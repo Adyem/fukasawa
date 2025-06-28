@@ -83,7 +83,9 @@ if ( ! function_exists( 'fukasawa_load_javascript_files' ) ) :
 
 		wp_register_script( 'fukasawa_flexslider', get_template_directory_uri() . '/assets/js/flexslider.js', '2.7.0', true );
 
-		wp_enqueue_script( 'fukasawa_global', get_template_directory_uri() . '/assets/js/global.js', array( 'jquery', 'masonry', 'imagesloaded', 'fukasawa_flexslider' ), fukasawa_get_version(), true );
+               wp_enqueue_script( 'fukasawa_global', get_template_directory_uri() . '/assets/js/global.js', array( 'jquery', 'masonry', 'imagesloaded', 'fukasawa_flexslider' ), fukasawa_get_version(), true );
+
+               wp_enqueue_script( 'fukasawa_lightbox', get_template_directory_uri() . '/assets/js/lightbox.js', array( 'jquery' ), fukasawa_get_version(), true );
 
 		if ( is_singular() ) wp_enqueue_script( 'comment-reply' );
 

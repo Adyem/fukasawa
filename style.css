@@ -2752,3 +2752,29 @@ img#wpstats { display: none; }
     max-width: 90%;
     max-height: 90%;
 }
+
+.fukasawa-lightbox-overlay .lightbox-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    color: #fff;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+}
+
+.fukasawa-lightbox-overlay .lightbox-prev,
+.fukasawa-lightbox-overlay .lightbox-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+}
+
+.fukasawa-lightbox-overlay .lightbox-prev { left: 15px; }
+.fukasawa-lightbox-overlay .lightbox-next { right: 15px; }

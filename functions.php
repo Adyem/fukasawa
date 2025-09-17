@@ -81,16 +81,47 @@ endif;
 if ( ! function_exists( 'fukasawa_load_javascript_files' ) ) :
 	function fukasawa_load_javascript_files() {
 
-		wp_register_script( 'fukasawa_flexslider', get_template_directory_uri() . '/assets/js/flexslider.js', '2.7.0', true );
+                wp_register_script( 'fukasawa_flexslider', get_template_directory_uri() . '/assets/js/flexslider.js', array( 'jquery' ), '2.7.0', true );
+                wp_register_script( 'fukasawa_lightbox', get_template_directory_uri() . '/assets/js/lightbox.js', array(), fukasawa_get_version(), true );
+                wp_register_script( 'fukasawa_contact_form', get_template_directory_uri() . '/assets/js/contact-form.js', array(), fukasawa_get_version(), true );
 
-               wp_enqueue_script( 'fukasawa_global', get_template_directory_uri() . '/assets/js/global.js', array( 'jquery', 'masonry', 'imagesloaded', 'fukasawa_flexslider' ), fukasawa_get_version(), true );
+                wp_enqueue_script( 'fukasawa_global', get_template_directory_uri() . '/assets/js/global.js', array( 'jquery', 'masonry', 'imagesloaded', 'fukasawa_flexslider' ), fukasawa_get_version(), true );
 
-               wp_enqueue_script( 'fukasawa_lightbox', get_template_directory_uri() . '/assets/js/lightbox.js', array( 'jquery' ), fukasawa_get_version(), true );
+                wp_enqueue_script( 'fukasawa_lightbox' );
 
 		if ( is_singular() ) wp_enqueue_script( 'comment-reply' );
 
 	}
 	add_action( 'wp_enqueue_scripts', 'fukasawa_load_javascript_files' );
+endif;
+
+
+if ( ! function_exists( 'fukasawa_enqueue_contact_form_assets' ) ) :
+        function fukasawa_enqueue_contact_form_assets() {
+
+                if ( is_page_template( 'template-contact.php' ) ) {
+
+                        wp_enqueue_script( 'fukasawa_contact_form' );
+
+                        wp_localize_script(
+                                'fukasawa_contact_form',
+                                'fukasawaContactForm',
+                                array(
+                                        'maxSlots'        => apply_filters( 'fukasawa_contact_form_max_slots', 5 ),
+                                        'removeSlotLabel' => __( 'Remove availability', 'fukasawa' ),
+                                        'errorMessages'   => array(
+                                                'sender_name'      => __( 'Please enter your name.', 'fukasawa' ),
+                                                'sender_email'     => __( 'Please enter a valid email address.', 'fukasawa' ),
+                                                'photography_type' => __( 'Please select a photography type.', 'fukasawa' ),
+                                                'message'          => __( 'Please share additional project details.', 'fukasawa' ),
+                                                'dates'            => __( 'Please provide at least one preferred date and time.', 'fukasawa' ),
+                                        ),
+                                )
+                        );
+                }
+
+        }
+        add_action( 'wp_enqueue_scripts', 'fukasawa_enqueue_contact_form_assets' );
 endif;
 
 
@@ -197,6 +228,241 @@ if ( ! function_exists( 'fukasawa_html_js_class' ) ) {
 	add_action( 'wp_head', 'fukasawa_html_js_class', 1 );
 
 }
+
+
+/* ---------------------------------------------------------------------------------------------
+   CONTACT FORM UTILITIES
+   --------------------------------------------------------------------------------------------- */
+
+
+if ( ! function_exists( 'fukasawa_get_photography_types' ) ) :
+        function fukasawa_get_photography_types() {
+
+                $types = array(
+                        'portrait'  => __( 'Portrait', 'fukasawa' ),
+                        'product'   => __( 'Product', 'fukasawa' ),
+                        'event'     => __( 'Event', 'fukasawa' ),
+                        'lifestyle' => __( 'Lifestyle', 'fukasawa' ),
+                        'branding'  => __( 'Branding', 'fukasawa' ),
+                );
+
+                return apply_filters( 'fukasawa_photography_types', $types );
+        }
+endif;
+
+
+if ( ! function_exists( 'fukasawa_get_photography_time_options' ) ) :
+        function fukasawa_get_photography_time_options() {
+
+                $times = array(
+                        '08:00' => __( '8:00 AM', 'fukasawa' ),
+                        '09:00' => __( '9:00 AM', 'fukasawa' ),
+                        '10:00' => __( '10:00 AM', 'fukasawa' ),
+                        '11:00' => __( '11:00 AM', 'fukasawa' ),
+                        '12:00' => __( '12:00 PM', 'fukasawa' ),
+                        '13:00' => __( '1:00 PM', 'fukasawa' ),
+                        '14:00' => __( '2:00 PM', 'fukasawa' ),
+                        '15:00' => __( '3:00 PM', 'fukasawa' ),
+                        '16:00' => __( '4:00 PM', 'fukasawa' ),
+                        '17:00' => __( '5:00 PM', 'fukasawa' ),
+                        '18:00' => __( '6:00 PM', 'fukasawa' ),
+                );
+
+                return apply_filters( 'fukasawa_photography_time_options', $times );
+        }
+endif;
+
+
+if ( ! function_exists( 'fukasawa_handle_contact_form' ) ) :
+        function fukasawa_handle_contact_form() {
+
+                $redirect = isset( $_POST['_wp_http_referer'] ) ? wp_unslash( $_POST['_wp_http_referer'] ) : home_url( '/' );
+                $redirect = $redirect ? $redirect : home_url( '/' );
+                $redirect = esc_url_raw( wp_sanitize_redirect( $redirect ) );
+
+                $anchorless_redirect = $redirect;
+                $anchor_position     = strpos( $anchorless_redirect, '#' );
+                if ( false !== $anchor_position ) {
+                        $anchorless_redirect = substr( $anchorless_redirect, 0, $anchor_position );
+                }
+
+                if ( ! isset( $_POST['fukasawa_contact_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['fukasawa_contact_nonce'] ) ), 'fukasawa_contact_form' ) ) {
+                        $invalid_redirect = add_query_arg( 'form_status', 'error', $anchorless_redirect ) . '#contact-form';
+                        wp_safe_redirect( $invalid_redirect );
+                        exit;
+                }
+
+                $photography_types = fukasawa_get_photography_types();
+                $time_options      = fukasawa_get_photography_time_options();
+                $allowed_types     = array_keys( $photography_types );
+                $allowed_times     = array_keys( $time_options );
+
+                $fields = array(
+                        'sender_name'      => isset( $_POST['sender_name'] ) ? sanitize_text_field( wp_unslash( $_POST['sender_name'] ) ) : '',
+                        'sender_email'     => isset( $_POST['sender_email'] ) ? sanitize_email( wp_unslash( $_POST['sender_email'] ) ) : '',
+                        'sender_phone'     => isset( $_POST['sender_phone'] ) ? sanitize_text_field( wp_unslash( $_POST['sender_phone'] ) ) : '',
+                        'photography_type' => isset( $_POST['photography_type'] ) ? sanitize_text_field( wp_unslash( $_POST['photography_type'] ) ) : '',
+                        'message'          => isset( $_POST['message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['message'] ) ) : '',
+                );
+
+                if ( $fields['sender_phone'] ) {
+                        $fields['sender_phone'] = preg_replace( '/[^0-9\+\-\(\)\s]/', '', $fields['sender_phone'] );
+                }
+
+                $errors          = array();
+                $raw_slots       = array();
+                $validated_slots = array();
+
+                if ( '' === $fields['sender_name'] ) {
+                        $errors['sender_name'] = __( 'Please enter your name.', 'fukasawa' );
+                }
+
+                if ( '' === $fields['sender_email'] || ! is_email( $fields['sender_email'] ) ) {
+                        $errors['sender_email'] = __( 'Please enter a valid email address.', 'fukasawa' );
+                }
+
+                if ( '' === $fields['photography_type'] || ! in_array( $fields['photography_type'], $allowed_types, true ) ) {
+                        $errors['photography_type'] = __( 'Please select a photography type.', 'fukasawa' );
+                }
+
+                if ( '' === $fields['message'] ) {
+                        $errors['message'] = __( 'Please share additional project details.', 'fukasawa' );
+                }
+
+                $dates = isset( $_POST['shoot_dates'] ) ? (array) wp_unslash( $_POST['shoot_dates'] ) : array();
+                $times = isset( $_POST['shoot_times'] ) ? (array) wp_unslash( $_POST['shoot_times'] ) : array();
+
+                foreach ( $dates as $index => $raw_date ) {
+                        $date_value = sanitize_text_field( $raw_date );
+                        $time_value = isset( $times[ $index ] ) ? sanitize_text_field( $times[ $index ] ) : '';
+
+                        $raw_slots[] = array(
+                                'date' => $date_value,
+                                'time' => $time_value,
+                        );
+
+                        if ( '' === $date_value && '' === $time_value ) {
+                                continue;
+                        }
+
+                        $date_valid = false;
+                        if ( $date_value ) {
+                                $date_object = date_create_from_format( 'Y-m-d', $date_value );
+                                $date_valid  = $date_object && $date_object->format( 'Y-m-d' ) === $date_value;
+                        }
+
+                        $time_valid = $time_value && in_array( $time_value, $allowed_times, true );
+
+                        if ( $date_valid && $time_valid ) {
+                                $validated_slots[] = array(
+                                        'date' => $date_value,
+                                        'time' => $time_value,
+                                );
+                        } else {
+                                $errors['dates'] = __( 'Please provide at least one preferred date and time.', 'fukasawa' );
+                        }
+                }
+
+                if ( empty( $validated_slots ) ) {
+                        $errors['dates'] = __( 'Please provide at least one preferred date and time.', 'fukasawa' );
+                }
+
+                if ( ! empty( $errors ) ) {
+                        $token = 'fukasawa_contact_' . wp_generate_uuid4();
+
+                        set_transient(
+                                $token,
+                                array(
+                                        'errors' => $errors,
+                                        'fields' => $fields,
+                                        'dates'  => $raw_slots,
+                                ),
+                                MINUTE_IN_SECONDS * 10
+                        );
+
+                        $error_redirect = add_query_arg(
+                                array(
+                                        'form_status' => 'error',
+                                        'token'       => $token,
+                                ),
+                                $anchorless_redirect
+                        ) . '#contact-form';
+
+                        wp_safe_redirect( $error_redirect );
+                        exit;
+                }
+
+                $recipient = apply_filters( 'fukasawa_contact_form_recipient', get_option( 'admin_email' ), $fields, $validated_slots );
+
+                $subject = sprintf( __( 'New photography inquiry from %s', 'fukasawa' ), $fields['sender_name'] );
+
+                $message_lines = array(
+                        sprintf( __( 'Name: %s', 'fukasawa' ), $fields['sender_name'] ),
+                        sprintf( __( 'Email: %s', 'fukasawa' ), $fields['sender_email'] ),
+                );
+
+                if ( $fields['sender_phone'] ) {
+                        $message_lines[] = sprintf( __( 'Phone: %s', 'fukasawa' ), $fields['sender_phone'] );
+                }
+
+                if ( $fields['photography_type'] && isset( $photography_types[ $fields['photography_type'] ] ) ) {
+                        $message_lines[] = sprintf( __( 'Photography type: %s', 'fukasawa' ), $photography_types[ $fields['photography_type'] ] );
+                }
+
+                $message_lines[] = __( 'Preferred availability:', 'fukasawa' );
+
+                foreach ( $validated_slots as $slot ) {
+                        $formatted_date = date_i18n( get_option( 'date_format' ), strtotime( $slot['date'] ) );
+                        $formatted_time = isset( $time_options[ $slot['time'] ] ) ? $time_options[ $slot['time'] ] : $slot['time'];
+
+                        $message_lines[] = sprintf( _x( ' - %1$s at %2$s', 'date and time for contact request', 'fukasawa' ), $formatted_date, $formatted_time );
+                }
+
+                $message_lines[] = '';
+                $message_lines[] = __( 'Project details:', 'fukasawa' );
+                $message_lines[] = $fields['message'];
+
+                $email_body = implode( "\n", $message_lines );
+
+                $headers = array( 'Reply-To: ' . $fields['sender_name'] . ' <' . $fields['sender_email'] . '>' );
+
+                $mail_sent = wp_mail( $recipient, $subject, $email_body, $headers );
+
+                if ( ! $mail_sent ) {
+                        $token = 'fukasawa_contact_' . wp_generate_uuid4();
+
+                        set_transient(
+                                $token,
+                                array(
+                                        'errors' => array( 'general' => __( 'We were unable to send your message. Please try again later.', 'fukasawa' ) ),
+                                        'fields' => $fields,
+                                        'dates'  => $raw_slots,
+                                ),
+                                MINUTE_IN_SECONDS * 10
+                        );
+
+                        $error_redirect = add_query_arg(
+                                array(
+                                        'form_status' => 'error',
+                                        'token'       => $token,
+                                ),
+                                $anchorless_redirect
+                        ) . '#contact-form';
+
+                        wp_safe_redirect( $error_redirect );
+                        exit;
+                }
+
+                do_action( 'fukasawa_contact_form_submission', $fields, $validated_slots );
+
+                $success_redirect = add_query_arg( 'form_status', 'success', $anchorless_redirect ) . '#contact-form';
+
+                wp_safe_redirect( $success_redirect );
+                exit;
+        }
+        add_action( 'admin_post_fukasawa_contact_form', 'fukasawa_handle_contact_form' );
+        add_action( 'admin_post_nopriv_fukasawa_contact_form', 'fukasawa_handle_contact_form' );
+endif;
 
 
 /* ---------------------------------------------------------------------------------------------

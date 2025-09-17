@@ -42,28 +42,49 @@
 			<?php 
 			
 			// Image format specific featured media
-			elseif ( $post_format == 'image' && has_post_thumbnail() ) : ?>
+                        elseif ( $post_format == 'image' && has_post_thumbnail() ) :
 
-				<figure class="featured-media">
+                                $thumbnail_id = get_post_thumbnail_id();
+                                $full_image   = $thumbnail_id ? wp_get_attachment_image_url( $thumbnail_id, 'full' ) : '';
+                                $srcset       = $thumbnail_id ? wp_get_attachment_image_srcset( $thumbnail_id, 'full' ) : '';
+                                $sizes        = $thumbnail_id ? wp_get_attachment_image_sizes( $thumbnail_id, 'full' ) : '';
+                                $alt_text     = $thumbnail_id ? get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) : '';
+                                ?>
 
-					<?php the_post_thumbnail( 'post-thumb' ); ?>
+                                <figure class="featured-media">
 
-					<a class="post-overlay" href="<?php the_permalink(); ?>" rel="bookmark">
-						<p class="view"><?php _e( 'View', 'fukasawa' ); ?> &rarr;</p>
-					</a>
+                                        <a class="post-lightbox-trigger" href="<?php echo esc_url( $full_image ? $full_image : get_permalink() ); ?>" data-lightbox-srcset="<?php echo esc_attr( $srcset ); ?>" data-lightbox-sizes="<?php echo esc_attr( $sizes ); ?>" data-lightbox-alt="<?php echo esc_attr( $alt_text ? $alt_text : get_the_title() ); ?>" data-lightbox-caption="<?php echo esc_attr( get_the_title() ); ?>">
 
-				</figure><!-- .featured-media -->
+                                                <?php echo wp_get_attachment_image( $thumbnail_id, 'post-thumb', false, array( 'loading' => 'lazy', 'class' => 'post-thumbnail-image' ) ); ?>
 
-			<?php 
-			
-			// Standard format featured media
-			elseif ( has_post_thumbnail() ) : ?>
-			
-				<figure class="featured-media" href="<?php the_permalink(); ?>">
-					<a href="<?php the_permalink(); ?>">	
-						<?php the_post_thumbnail( 'post-thumb' ); ?>
-					</a>
-				</figure><!-- .featured-media -->
+                                                <span class="post-overlay">
+                                                        <p class="view"><?php _e( 'View', 'fukasawa' ); ?> &rarr;</p>
+                                                </span>
+
+                                                <span class="screen-reader-text"><?php printf( __( 'Open full-size image of %s', 'fukasawa' ), get_the_title() ); ?></span>
+
+                                        </a>
+
+                                </figure><!-- .featured-media -->
+
+                        <?php
+
+                        // Standard format featured media
+                        elseif ( has_post_thumbnail() ) :
+
+                                $thumbnail_id = get_post_thumbnail_id();
+                                $full_image   = $thumbnail_id ? wp_get_attachment_image_url( $thumbnail_id, 'full' ) : '';
+                                $srcset       = $thumbnail_id ? wp_get_attachment_image_srcset( $thumbnail_id, 'full' ) : '';
+                                $sizes        = $thumbnail_id ? wp_get_attachment_image_sizes( $thumbnail_id, 'full' ) : '';
+                                $alt_text     = $thumbnail_id ? get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) : '';
+                                ?>
+
+                                <figure class="featured-media">
+                                        <a class="post-lightbox-trigger" href="<?php echo esc_url( $full_image ? $full_image : get_permalink() ); ?>" data-lightbox-srcset="<?php echo esc_attr( $srcset ); ?>" data-lightbox-sizes="<?php echo esc_attr( $sizes ); ?>" data-lightbox-alt="<?php echo esc_attr( $alt_text ? $alt_text : get_the_title() ); ?>" data-lightbox-caption="<?php echo esc_attr( get_the_title() ); ?>">
+                                                <?php echo wp_get_attachment_image( $thumbnail_id, 'post-thumb', false, array( 'loading' => 'lazy', 'class' => 'post-thumbnail-image' ) ); ?>
+                                                <span class="screen-reader-text"><?php printf( __( 'Open full-size image of %s', 'fukasawa' ), get_the_title() ); ?></span>
+                                        </a>
+                                </figure><!-- .featured-media -->
 					
 				<?php 
 			endif;

@@ -668,7 +668,7 @@ if ( ! function_exists( 'fukasawa_comment' ) ) {
 		
 		<li <?php comment_class(); ?> id="comment-<?php comment_ID(); ?>">
 		
-			<?php __( 'Pingback:', 'fukasawa' ); ?> <?php comment_author_link(); ?> <?php edit_comment_link( __( 'Edit', 'fukasawa' ), '<span class="edit-link">', '</span>' ); ?>
+			<?php esc_html_e( 'Pingback:', 'fukasawa' ); ?> <?php comment_author_link(); ?> <?php edit_comment_link( __( 'Edit', 'fukasawa' ), '<span class="edit-link">', '</span>' ); ?>
 			
 		</li>
 		<?php

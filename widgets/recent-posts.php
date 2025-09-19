@@ -30,10 +30,18 @@ class fukasawa_recent_posts extends WP_Widget {
 				
 				<?php
 
-				global $post;
-				$sticky = get_option( 'sticky_posts' );	
+                                global $post;
+                                $sticky = get_option( 'sticky_posts' );
+                                $sticky = is_array( $sticky ) ? array_values( array_filter( array_map( 'absint', $sticky ) ) ) : array();
 
-				$not_in = array( $sticky[0], $post->ID );
+                                $not_in = array();
+                                if ( isset( $sticky[0] ) ) {
+                                        $not_in[] = $sticky[0];
+                                }
+                                if ( isset( $post->ID ) ) {
+                                        $not_in[] = (int) $post->ID;
+                                }
+                                $not_in = array_values( array_unique( array_filter( $not_in ) ) );
 				
 				if ( $number_of_posts == 0 ) $number_of_posts = 5;
 				

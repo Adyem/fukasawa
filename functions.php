@@ -598,9 +598,21 @@ if ( ! function_exists( 'fukasawa_admin_css' ) ) {
 
 if ( ! function_exists( 'fukasawa_flexslider' ) ) {
 
-	function fukasawa_flexslider( $size = 'thumbnail' ) {
+        function fukasawa_flexslider( $size = 'thumbnail' ) {
 
-		$attachment_parent = is_page() ? $post->ID : get_the_ID();
+                $attachment_parent = is_page() ? get_queried_object_id() : get_the_ID();
+
+                if ( ! $attachment_parent ) {
+                        $post = get_post();
+
+                        if ( $post instanceof WP_Post ) {
+                                $attachment_parent = $post->ID;
+                        }
+                }
+
+                if ( ! $attachment_parent ) {
+                        return;
+                }
 
 		$image_args = array(
 			'numberposts'    => -1, // show all

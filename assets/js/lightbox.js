@@ -20,6 +20,7 @@
         let focusableElements = [];
         let previouslyFocusedElement = null;
         let overlayIsOpen = false;
+        let fetchRequestId = 0;
 
         const getTriggers = () => {
                 triggers = Array.prototype.slice.call(document.querySelectorAll(LIGHTBOX_SELECTOR));
@@ -45,6 +46,55 @@
                 }
         };
 
+        const getNormalizedSource = (source) => {
+                if (!source) {
+                        return '';
+                }
+
+                return source.split('#')[0].split('?')[0];
+        };
+
+        const getSourceBasename = (source) => {
+                const normalized = getNormalizedSource(source);
+                return normalized.split('/').pop() || '';
+        };
+
+        const getImageSource = (image) => {
+                if (!image) {
+                        return '';
+                }
+
+                return image.getAttribute('data-src')
+                        || image.getAttribute('data-lazy')
+                        || image.getAttribute('data-original')
+                        || image.getAttribute('src')
+                        || '';
+        };
+
+        const getTriggerData = (trigger) => {
+                if (!trigger) {
+                        return null;
+                }
+
+                if (!(trigger instanceof Element)) {
+                        return trigger;
+                }
+
+                const { lightboxSrc, lightboxSrcset, lightboxSizes, lightboxAlt, lightboxCaption, lightboxPermalink } = trigger.dataset;
+                const image = trigger.querySelector('img');
+                const src = lightboxSrc || trigger.getAttribute('href') || '';
+
+                return {
+                        src,
+                        srcset: lightboxSrcset || '',
+                        sizes: lightboxSizes || '',
+                        alt: lightboxAlt || (image ? image.alt : ''),
+                        caption: lightboxCaption || (image ? image.alt : ''),
+                        permalink: lightboxPermalink || '',
+                        sourceElement: trigger
+                };
+        };
+
         const preloadAdjacent = (index) => {
                 if (!triggers.length) {
                         return;
@@ -60,8 +110,8 @@
                                 return;
                         }
 
-                        const { lightboxSrc, lightboxSrcset, lightboxSizes } = targetTrigger.dataset;
-                        const src = lightboxSrc || targetTrigger.getAttribute('href');
+                        const data = getTriggerData(targetTrigger);
+                        const src = data ? data.src : '';
 
                         if (!src) {
                                 return;
@@ -69,10 +119,10 @@
 
                         const image = new Image();
 
-                        if (lightboxSrcset) {
-                                image.srcset = lightboxSrcset;
-                                if (lightboxSizes) {
-                                        image.sizes = lightboxSizes;
+                        if (data && data.srcset) {
+                                image.srcset = data.srcset;
+                                if (data.sizes) {
+                                        image.sizes = data.sizes;
                                 }
                         }
 
@@ -87,18 +137,17 @@
                         return;
                 }
 
-                const { lightboxSrc, lightboxSrcset, lightboxSizes, lightboxAlt, lightboxCaption } = trigger.dataset;
-                const image = trigger.querySelector('img');
-                const src = lightboxSrc || trigger.getAttribute('href');
+                const data = getTriggerData(trigger);
+                const src = data ? data.src : '';
 
                 if (!src) {
                         return;
                 }
 
-                if (lightboxSrcset) {
-                        imageEl.srcset = lightboxSrcset;
-                        if (lightboxSizes) {
-                                imageEl.sizes = lightboxSizes;
+                if (data && data.srcset) {
+                        imageEl.srcset = data.srcset;
+                        if (data.sizes) {
+                                imageEl.sizes = data.sizes;
                         } else {
                                 imageEl.removeAttribute('sizes');
                         }
@@ -108,10 +157,9 @@
                 }
 
                 imageEl.src = src;
-                imageEl.alt = lightboxAlt || (image ? image.alt : '');
+                imageEl.alt = data && data.alt ? data.alt : '';
 
-                const captionContent = lightboxCaption || (image ? image.alt : '');
-                setCaption(captionContent);
+                setCaption(data && data.caption ? data.caption : '');
 
                 activeIndex = index;
                 preloadAdjacent(index);
@@ -211,7 +259,88 @@
                 });
         };
 
-        document.addEventListener('click', (event) => {
+        const getPostImages = async (permalink) => {
+                if (!permalink) {
+                        return [];
+                }
+
+                try {
+                        const response = await fetch(permalink, { credentials: 'same-origin' });
+
+                        if (!response.ok) {
+                                return [];
+                        }
+
+                        const html = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const images = Array.prototype.slice.call(
+                                doc.querySelectorAll('.featured-media img, .post-content img')
+                        );
+
+                        const seen = new Set();
+                        const collected = [];
+
+                        images.forEach((image) => {
+                                const src = getImageSource(image);
+
+                                if (!src) {
+                                        return;
+                                }
+
+                                const normalized = getNormalizedSource(src);
+
+                                if (seen.has(normalized)) {
+                                        return;
+                                }
+
+                                seen.add(normalized);
+
+                                const figure = image.closest('figure');
+                                const caption = figure ? figure.querySelector('figcaption') : null;
+                                const captionText = caption ? caption.textContent.trim() : '';
+
+                                collected.push({
+                                        src,
+                                        srcset: image.getAttribute('srcset') || '',
+                                        sizes: image.getAttribute('sizes') || '',
+                                        alt: image.getAttribute('alt') || '',
+                                        caption: captionText || image.getAttribute('alt') || ''
+                                });
+                        });
+
+                        return collected;
+                } catch (error) {
+                        return [];
+                }
+        };
+
+        const findMatchingIndex = (items, reference) => {
+                if (!items.length || !reference) {
+                        return -1;
+                }
+
+                const referenceSource = getNormalizedSource(reference.src);
+                const referenceBasename = getSourceBasename(reference.src);
+
+                return items.findIndex((item) => {
+                        const data = getTriggerData(item);
+                        const candidateSource = data ? getNormalizedSource(data.src) : '';
+                        const candidateBasename = getSourceBasename(candidateSource);
+
+                        if (!candidateSource) {
+                                return false;
+                        }
+
+                        if (referenceSource && candidateSource === referenceSource) {
+                                return true;
+                        }
+
+                        return referenceBasename && candidateBasename === referenceBasename;
+                });
+        };
+
+        document.addEventListener('click', async (event) => {
                 const trigger = event.target.closest(LIGHTBOX_SELECTOR);
 
                 if (!trigger) {
@@ -219,6 +348,26 @@
                 }
 
                 event.preventDefault();
+                const fetchId = ++fetchRequestId;
+                const triggerData = getTriggerData(trigger);
+                const permalink = triggerData ? triggerData.permalink : '';
+
+                if (permalink) {
+                        const fetchedTriggers = await getPostImages(permalink);
+
+                        if (fetchId !== fetchRequestId) {
+                                return;
+                        }
+
+                        if (fetchedTriggers.length) {
+                                triggers = fetchedTriggers;
+                                const matchedIndex = findMatchingIndex(fetchedTriggers, triggerData);
+                                const startIndex = matchedIndex === -1 ? 0 : matchedIndex;
+                                openOverlay(startIndex, overlay.querySelector('[data-lightbox-close]'));
+                                return;
+                        }
+                }
+
                 getTriggers();
 
                 const index = triggers.indexOf(trigger);

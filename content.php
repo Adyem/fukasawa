@@ -53,7 +53,7 @@
 
                                 <figure class="featured-media">
 
-                                        <a class="post-lightbox-trigger" href="<?php echo esc_url( $full_image ? $full_image : get_permalink() ); ?>" data-lightbox-srcset="<?php echo esc_attr( $srcset ); ?>" data-lightbox-sizes="<?php echo esc_attr( $sizes ); ?>" data-lightbox-alt="<?php echo esc_attr( $alt_text ? $alt_text : get_the_title() ); ?>" data-lightbox-caption="<?php echo esc_attr( get_the_title() ); ?>">
+                                        <a class="post-lightbox-trigger" href="<?php echo esc_url( $full_image ? $full_image : get_permalink() ); ?>" data-lightbox-permalink="<?php echo esc_url( get_permalink() ); ?>" data-lightbox-srcset="<?php echo esc_attr( $srcset ); ?>" data-lightbox-sizes="<?php echo esc_attr( $sizes ); ?>" data-lightbox-alt="<?php echo esc_attr( $alt_text ? $alt_text : get_the_title() ); ?>" data-lightbox-caption="<?php echo esc_attr( get_the_title() ); ?>">
 
                                                 <?php echo wp_get_attachment_image( $thumbnail_id, 'post-thumb', false, array( 'loading' => 'lazy', 'class' => 'post-thumbnail-image' ) ); ?>
 
@@ -80,7 +80,7 @@
                                 ?>
 
                                 <figure class="featured-media">
-                                        <a class="post-lightbox-trigger" href="<?php echo esc_url( $full_image ? $full_image : get_permalink() ); ?>" data-lightbox-srcset="<?php echo esc_attr( $srcset ); ?>" data-lightbox-sizes="<?php echo esc_attr( $sizes ); ?>" data-lightbox-alt="<?php echo esc_attr( $alt_text ? $alt_text : get_the_title() ); ?>" data-lightbox-caption="<?php echo esc_attr( get_the_title() ); ?>">
+                                        <a class="post-lightbox-trigger" href="<?php echo esc_url( $full_image ? $full_image : get_permalink() ); ?>" data-lightbox-permalink="<?php echo esc_url( get_permalink() ); ?>" data-lightbox-srcset="<?php echo esc_attr( $srcset ); ?>" data-lightbox-sizes="<?php echo esc_attr( $sizes ); ?>" data-lightbox-alt="<?php echo esc_attr( $alt_text ? $alt_text : get_the_title() ); ?>" data-lightbox-caption="<?php echo esc_attr( get_the_title() ); ?>">
                                                 <?php echo wp_get_attachment_image( $thumbnail_id, 'post-thumb', false, array( 'loading' => 'lazy', 'class' => 'post-thumbnail-image' ) ); ?>
                                                 <span class="screen-reader-text"><?php printf( __( 'Open full-size image of %s', 'fukasawa' ), get_the_title() ); ?></span>
                                         </a>
